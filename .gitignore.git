@@ -1,0 +1,14 @@
+# Ignore compiled files
+*.class
+*.jar
+*.war
+*.ear
+*.exe
+
+# Ignore IDE files and directories
+.idea/
+.vscode/
+
+# Ignore build output
+/build/
+/dist/

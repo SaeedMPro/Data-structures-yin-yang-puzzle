@@ -18,32 +18,6 @@ typedef struct TreeNode
 // Check if board satisfies conditions
 bool is_valid(Board board)
 {
-    // // Check 2x2 squares
-    // for (int y = 0; y < SIZE - 1; y++)
-    // {
-    //     for (int x = 0; x < SIZE - 1; x++)
-    //     {
-    //         int index = y * SIZE + x;
-    //         if (((board & (1 << index)) && (board & (1 << (index + 1)))) &&
-    //             ((board & (1 << (index + SIZE))) && (board & (1 << (index + SIZE + 1)))))
-    //         {
-    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
-    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         if (((!(board & (1 << index))) && (!(board & (1 << (index + 1))))) &&
-    //             ((!(board & (1 << (index + SIZE)))) && (!(board & (1 << (index + SIZE + 1))))))
-    //         {
-    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
-    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //     }
-    // }
 
     return true;
 }
@@ -104,6 +78,8 @@ void set_black(Board *board, int x, int y)
 // DFS algorithm
 void dfs(TreeNode *root)
 {
+    printf("DFS:\n");
+    
     if (root == NULL)
         return;
 
@@ -177,6 +153,7 @@ void dfs(TreeNode *root)
 // Breadth-First Search algorithm
 void bfs(TreeNode *root)
 {
+    printf("BFS:\n");
     if (root == NULL)
         return;
 
@@ -234,9 +211,7 @@ int main()
 
     printf("BFS:\n");
     bfs(root);
-
     count = 0;
-    
     printf("DFS:\n");
     dfs(root);
 
