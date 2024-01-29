@@ -12,3 +12,5 @@
 # Ignore build output
 /build/
 /dist/
+/a.exe
+/.vscode
