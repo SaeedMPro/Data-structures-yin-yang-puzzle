@@ -79,7 +79,7 @@ void set_black(Board *board, int x, int y)
 void dfs(TreeNode *root)
 {
     printf("DFS:\n");
-    
+
     if (root == NULL)
         return;
 
@@ -196,7 +196,7 @@ void free_tree(TreeNode *root)
         free_tree(root->children[i]);
     }
 
-    free(root->children);
+    free_tree(root->children);
     free(root);
 }
 
@@ -208,6 +208,8 @@ int main()
     root->state = initial;
     root->children = NULL;
     root->num_children = 0;
+
+    atexit(free_tree);
 
     printf("BFS:\n");
     bfs(root);
