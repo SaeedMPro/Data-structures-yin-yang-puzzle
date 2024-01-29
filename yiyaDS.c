@@ -15,8 +15,148 @@ typedef struct TreeNode
     int num_children;
 } TreeNode;
 
+// Count number of cell that paint
+int count_cell(Board board)
+{
+    int num = 0;
+    for (int i = 0; i < SIZE * SIZE; ++i)
+    {
+        if ((board & (1 << i)) != 0)
+        {
+            num++;
+        }
+    }
+
+    return num;
+}
+
+
+// Check if cell i is connected to any other cell of the same color
+bool connected(Board board, int visited[], int i)
+{
+    if (visited[i])
+    {
+        return false;
+    }
+
+    visited[i] = 1;
+
+    int x = i % SIZE, y = i / SIZE;
+    int index = y * SIZE + x;
+
+    // Check neighboring cells
+    for (int dy = -1; dy <= 1; ++dy)
+    {
+        for (int dx = -1; dx <= 1; ++dx)
+        {
+            if (dx == 0 && dy == 0)
+            {
+                continue;
+            }
+
+            int new_x = x + dx, new_y = y + dy;
+            if (new_x >= 0 && new_x < SIZE && new_y >= 0 && new_y < SIZE)
+            {
+                int neighbor_index = new_y * SIZE + new_x;
+                if (((board & (1 << index)) && (board & (1 << neighbor_index))) ||
+                    ((board & (1 << (index + 16))) && (board & (1 << (neighbor_index + 16)))))
+                {
+                    if (connected(board, visited, neighbor_index))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+
+    return false;
+}
+
+// Check if board satisfies continuity condition
+bool check_connectivity(Board board)
+{
+    // Count number of white and black cells
+    int white_cells = 0, black_cells = 0;
+    for (int i = 0; i < SIZE * SIZE; ++i)
+    {
+        if ((board & (1 << i)) != 0)
+        {
+            white_cells++;
+        }
+        else if ((board & (1 << (i + 16))) != 0)
+        {
+            black_cells++;
+        }
+    }
+
+    if (white_cells == 0 || black_cells == 0)
+    {
+        // If there are no white or black cells, the condition is satisfied
+        return true;
+    }
+
+    // Check if white and black cells are connected
+    int visited[SIZE * SIZE] = {0};
+    for (int i = 0; i < SIZE * SIZE; ++i)
+    {
+        if (connected(board, visited, i))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+// Check 2*2 square 
+bool check_square(Board board ){
+
+    // for (int y = 0; y < SIZE - 1; y++)
+    // {
+    //     for (int x = 0; x < SIZE - 1; x++)
+    //     {
+    //         int index = y * SIZE + x;
+    //         if (((board & (1 << index)) && (board & (1 << (index + 1)))) &&
+    //             ((board & (1 << (index + SIZE))) && (board & (1 << (index + SIZE + 1)))))
+    //         {
+    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
+    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //         if (((!(board & (1 << index))) && (!(board & (1 << (index + 1))))) &&
+    //             ((!(board & (1 << (index + SIZE)))) && (!(board & (1 << (index + SIZE + 1))))))
+    //         {
+    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
+    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
+    //             {
+    //                 return false;
+    //             }
+    //         }
+    //     }
+    // }
+
+    return true;
+}
 // Check if board satisfies conditions
 bool is_valid(Board board)
+{
+    // Checking the condition that the board is completely full
+    if (count_cell(board) != 16)
+    {
+        return false;
+    }
+    // Check condition 1 & 2
+    if (check_square(board) && check_connectivity(board))
+    {   
+        return true;
+    }
+
+    return false;
+}
+
+bool condition_continue(Board board)
 {
 
     return true;
@@ -117,7 +257,7 @@ void dfs(TreeNode *root)
                 dfs(child);
 
                 // Remove the child node if it leads to an invalid state
-                if (!is_valid(child->state))
+                if (!condition_continue(child->state))
                 {
                     free(child);
                     root->num_children--;
@@ -140,7 +280,7 @@ void dfs(TreeNode *root)
                 dfs(child);
 
                 // Remove the child node if it leads to an invalid state
-                if (!is_valid(child->state))
+                if (!condition_continue(child->state))
                 {
                     free(child);
                     root->num_children--;
@@ -169,10 +309,58 @@ void bfs(TreeNode *root)
         // Dequeue a node
         TreeNode *current = queue[front++];
 
-        if (is_valid(current->state))
+        // Generate next states and add them as children
+        for (int x = 0; x < SIZE; x++)
         {
-            // Found a valid state
-            print_board(current->state);
+            for (int y = 0; y < SIZE; y++)
+            {
+                Board next_state = current->state;
+
+                // Check if the cell is already painted
+                int index = y * SIZE + x;
+                if (!(next_state & (1 << index)))
+                {
+                    // Try painting white
+                    set_white(&next_state, x, y);
+
+                    // Create a new child node for the painted state
+                    TreeNode *child = malloc(sizeof(TreeNode));
+                    child->state = next_state;
+                    child->children = NULL;
+                    child->num_children = 0;
+
+                    // Add the child node
+                    current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
+                    current->children[current->num_children++] = child;
+
+                    // Recursively explore the child node
+                    if (is_valid(child->state))
+                    {
+                        // Found a valid state
+                        print_board(child->state);
+                    }
+
+                    // Try painting black
+                    set_black(&next_state, x, y);
+
+                    // Create a new child node for the painted state
+                    child = malloc(sizeof(TreeNode));
+                    child->state = next_state;
+                    child->children = NULL;
+                    child->num_children = 0;
+
+                    // Add the child node
+                    current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
+                    current->children[current->num_children++] = child;
+
+                    // Recursively explore the child node
+                    if (is_valid(child->state))
+                    {
+                        // Found a valid state
+                        print_board(child->state);
+                    }
+                }
+            }
         }
 
         // Enqueue children
@@ -184,7 +372,6 @@ void bfs(TreeNode *root)
 
     free(queue);
 }
-
 // Free the memory used by the tree
 void free_tree(TreeNode *root)
 {
@@ -196,7 +383,7 @@ void free_tree(TreeNode *root)
         free_tree(root->children[i]);
     }
 
-    free_tree(root->children);
+    free(root->children);
     free(root);
 }
 
@@ -209,13 +396,11 @@ int main()
     root->children = NULL;
     root->num_children = 0;
 
-    atexit(free_tree);
-
-    printf("BFS:\n");
-    bfs(root);
-    count = 0;
     printf("DFS:\n");
     dfs(root);
+    count = 0;
+    printf("BFS:\n");
+    bfs(root);
 
     free_tree(root);
 
