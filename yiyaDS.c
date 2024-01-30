@@ -15,11 +15,6 @@ typedef struct TreeNode
     int num_children;
 } TreeNode;
 
-// Stack structure for DFS (connectivity condition)
-typedef struct
-{
-    int x, y;
-} StackItem;
 // Count number of cell that paint
 int count_cell(Board board)
 {
@@ -82,8 +77,6 @@ bool check_connectivity(Board board, int target)
         }
     }
 
-    printf("target %d\tnumcell %d\n", target, num_cells);
-
     if (num_cells > 0)
     {
         // Perform DFS
@@ -136,40 +129,35 @@ bool check_connectivity(Board board, int target)
 // Check 2*2 square
 bool check_square(Board board)
 {
+    // Iterate over each possible 2x2 square
+    for (int y = 0; y < SIZE - 1; y++)
+    {
+        for (int x = 0; x < SIZE - 1; x++)
+        {
+            int index = y * SIZE + x;
 
-    // for (int y = 0; y < SIZE - 1; y++)
-    // {
-    //     for (int x = 0; x < SIZE - 1; x++)
-    //     {
-    //         int index = y * SIZE + x;
-    //         if (((board & (1 << index)) && (board & (1 << (index + 1)))) &&
-    //             ((board & (1 << (index + SIZE))) && (board & (1 << (index + SIZE + 1)))))
-    //         {
-    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
-    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //         if (((!(board & (1 << index))) && (!(board & (1 << (index + 1))))) &&
-    //             ((!(board & (1 << (index + SIZE)))) && (!(board & (1 << (index + SIZE + 1))))))
-    //         {
-    //             if ((board & (1 << (index + 16))) == (board & (1 << (index + 1 + 16))) &&
-    //                 (board & (1 << (index + SIZE + 16))) == (board & (1 << (index + SIZE + 1 + 16))))
-    //             {
-    //                 return false;
-    //             }
-    //         }
-    //     }
-    // }
+            // Extract the colors of the cells in the square
+            uint32_t colorTopLeft = (board >> (index + 16)) & 1;
+            uint32_t colorTopRight = (board >> (index + 1 + 16)) & 1;
+            uint32_t colorBottomLeft = (board >> (index + SIZE + 16)) & 1;
+            uint32_t colorBottomRight = (board >> (index + SIZE + 1 + 16)) & 1;
 
+            // Check if the colors are the same for all cells
+            if (colorTopLeft == colorTopRight && colorTopLeft == colorBottomLeft && colorTopLeft == colorBottomRight)
+            {
+                // Colors are the same, return false (violation)
+                return false;
+            }
+        }
+    }
     return true;
 }
+
 // Check if board satisfies conditions
 bool is_valid(Board board)
 {
+    
     // Checking the condition that the board is completely full
-    printf("\nnum : %d\n", count_cell(board));
     if (count_cell(board) != 16)
     {
         return false;
@@ -183,22 +171,18 @@ bool is_valid(Board board)
     return false;
 }
 
-bool condition_continue(Board board)
-{
+// bool condition_continue(Board board)
+// {
+//     if (check_square(board))
+//     {
+//         return true;
+//     }
+//     else
+//         return false;
 
-    return true;
-}
+//     return true;
+// }
 
-// Print board
-void printBinary(int number)
-{
-    // Assuming 32-bit integer for simplicity
-    for (int i = 31; i >= 0; i--)
-    {
-        printf("%d", (number >> i) & 1);
-    }
-    printf("\n");
-}
 void print_board(Board board)
 {
     for (int y = 0; y < SIZE; y++)
@@ -227,8 +211,7 @@ void print_board(Board board)
         printf("\n");
     }
 
-    printBinary(board);
-    printf("-----------%d-------------Number of Board: %d-----------------------\n\n\n", board, ++count);
+    printf("==========================Number of Board: %d==========================\n\n\n", ++count);
 }
 
 // Create empty board
@@ -257,74 +240,69 @@ void set_black(Board *board, int x, int y)
 // DFS algorithm
 void dfs(TreeNode *root)
 {
-    printf("DFS:\n");
 
     if (root == NULL)
         return;
 
     if (is_valid(root->state))
     {
-        // Found a valid state
         print_board(root->state);
     }
 
     // Generate next states and add them as children
-    for (int x = 0; x < SIZE; x++)
+    for (int i = 0; i < SIZE * SIZE; i++)
     {
-        for (int y = 0; y < SIZE; y++)
+        Board next_state = root->state;
+
+        // Check if the cell is already painted
+        if (!(next_state & (1 << i)))
         {
-            Board next_state = root->state;
+            // Try painting black
+            set_black(&next_state, i % SIZE, i / SIZE);
 
-            // Check if the cell is already painted
-            int index = y * SIZE + x;
-            if (!(next_state & (1 << index)))
-            {
-                // Try painting white
-                set_white(&next_state, x, y);
+            // Create a new child node for the painted state
+            TreeNode *child = malloc(sizeof(TreeNode));
+            child->state = next_state;
+            child->children = NULL;
+            child->num_children = 0;
 
-                // Create a new child node for the painted state
-                TreeNode *child = malloc(sizeof(TreeNode));
-                child->state = next_state;
-                child->children = NULL;
-                child->num_children = 0;
+            // Add the child node
+            root->children = realloc(root->children, (root->num_children + 1) * sizeof(TreeNode *));
+            root->children[root->num_children++] = child;
 
-                // Add the child node
-                root->children = realloc(root->children, (root->num_children + 1) * sizeof(TreeNode *));
-                root->children[root->num_children++] = child;
+            // Remove the child node if it leads to an invalid state
+            // if (!condition_continue(child->state))
+            // {
+            //     free(child);
+            //     root->num_children--;
+            //     printf("in1");
+            // }
+            // else 
+            dfs(child);    // Recursively explore the child node
 
-                // Recursively explore the child node
-                dfs(child);
+            // Try painting white
+            set_white(&next_state, i % SIZE, i / SIZE);
 
-                // Remove the child node if it leads to an invalid state
-                if (!condition_continue(child->state))
-                {
-                    free(child);
-                    root->num_children--;
-                }
+            // Create a new child node for the painted state
+            child = malloc(sizeof(TreeNode));
+            child->state = next_state;
+            child->children = NULL;
+            child->num_children = 0;
 
-                // Try painting black
-                set_black(&next_state, x, y);
+            // Add the child node
+            root->children = realloc(root->children, (root->num_children + 1) * sizeof(TreeNode *));
+            root->children[root->num_children++] = child;
 
-                // Create a new child node for the painted state
-                child = malloc(sizeof(TreeNode));
-                child->state = next_state;
-                child->children = NULL;
-                child->num_children = 0;
+            // Remove the child node if it leads to an invalid state
+            // if (!condition_continue(child->state))
+            // {
+            //     free(child);
+            //     root->num_children--;
+            //     printf("in2");
 
-                // Add the child node
-                root->children = realloc(root->children, (root->num_children + 1) * sizeof(TreeNode *));
-                root->children[root->num_children++] = child;
-
-                // Recursively explore the child node
-                dfs(child);
-
-                // Remove the child node if it leads to an invalid state
-                if (!condition_continue(child->state))
-                {
-                    free(child);
-                    root->num_children--;
-                }
-            }
+            // }
+            // else 
+            dfs(child);    // Recursively explore the child node
         }
     }
 }
@@ -332,7 +310,6 @@ void dfs(TreeNode *root)
 // Breadth-First Search algorithm
 void bfs(TreeNode *root)
 {
-    printf("BFS:\n");
     if (root == NULL)
         return;
 
@@ -348,69 +325,58 @@ void bfs(TreeNode *root)
         // Dequeue a node
         TreeNode *current = queue[front++];
 
-        // Generate next states and add them as children
-        for (int x = 0; x < SIZE; x++)
+        // Process the current node
+        if (is_valid(root->state))
         {
-            for (int y = 0; y < SIZE; y++)
-            {
-                Board next_state = current->state;
-
-                // Check if the cell is already painted
-                int index = y * SIZE + x;
-                if (!(next_state & (1 << index)))
-                {
-                    // Try painting white
-                    set_white(&next_state, x, y);
-
-                    // Create a new child node for the painted state
-                    TreeNode *child = malloc(sizeof(TreeNode));
-                    child->state = next_state;
-                    child->children = NULL;
-                    child->num_children = 0;
-
-                    // Add the child node
-                    current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
-                    current->children[current->num_children++] = child;
-
-                    // Recursively explore the child node
-                    if (is_valid(child->state))
-                    {
-                        // Found a valid state
-                        print_board(child->state);
-                    }
-
-                    // Try painting black
-                    set_black(&next_state, x, y);
-
-                    // Create a new child node for the painted state
-                    child = malloc(sizeof(TreeNode));
-                    child->state = next_state;
-                    child->children = NULL;
-                    child->num_children = 0;
-
-                    // Add the child node
-                    current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
-                    current->children[current->num_children++] = child;
-
-                    // Recursively explore the child node
-                    if (is_valid(child->state))
-                    {
-                        // Found a valid state
-                        print_board(child->state);
-                    }
-                }
-            }
+            print_board(root->state);
         }
 
-        // Enqueue children
-        for (int i = 0; i < current->num_children; ++i)
+        // Generate next states and add them as children
+        for (int i = 0; i < SIZE * SIZE; i++)
         {
-            queue[rear++] = current->children[i];
+            Board next_state = current->state;
+
+            // Check if the cell is already painted
+            if (!(next_state & (1 << i)))
+            {
+                // Try painting black
+                set_black(&next_state, i % SIZE, i / SIZE);
+
+                // Create a new child node for the painted state
+                TreeNode *child = malloc(sizeof(TreeNode));
+                child->state = next_state;
+                child->children = NULL;
+                child->num_children = 0;
+
+                // Add the child node
+                current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
+                current->children[current->num_children++] = child;
+
+                // Enqueue the child node
+                queue[rear++] = child;
+
+                // Try painting white
+                set_white(&next_state, i % SIZE, i / SIZE);
+
+                // Create a new child node for the painted state
+                child = malloc(sizeof(TreeNode));
+                child->state = next_state;
+                child->children = NULL;
+                child->num_children = 0;
+
+                // Add the child node
+                current->children = realloc(current->children, (current->num_children + 1) * sizeof(TreeNode *));
+                current->children[current->num_children++] = child;
+
+                // Enqueue the child node
+                queue[rear++] = child;
+            }
         }
     }
 
     free(queue);
 }
+
 // Free the memory used by the tree
 void free_tree(TreeNode *root)
 {
@@ -428,6 +394,7 @@ void free_tree(TreeNode *root)
 
 int main()
 {
+    
     Board initial = create_board();
 
     TreeNode *root = malloc(sizeof(TreeNode));
@@ -435,15 +402,14 @@ int main()
     root->children = NULL;
     root->num_children = 0;
 
-    printf("DFS:\n");
-    dfs(root);
+    printf("BFS:\n");
+    bfs(root);
+    free_tree(root);
 
     count = 0;
 
-    printf("BFS:\n");
-    bfs(root);
-
+    printf("DFS:\n");
+    dfs(root);
     free_tree(root);
-
     return 0;
 }
