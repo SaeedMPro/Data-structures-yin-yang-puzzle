@@ -15,11 +15,16 @@ typedef struct TreeNode
     int num_children;
 } TreeNode;
 
+// Stack structure for DFS (connectivity condition)
+typedef struct
+{
+    int x, y;
+} StackItem;
 // Count number of cell that paint
 int count_cell(Board board)
 {
     int num = 0;
-    for (int i = 0; i < SIZE * SIZE; ++i)
+    for (int i = 0; i < 16; ++i)
     {
         if ((board & (1 << i)) != 0)
         {
@@ -30,75 +35,102 @@ int count_cell(Board board)
     return num;
 }
 
-// Check if cell i is connected to any other cell of the same color
-// Check if cell i is connected to any other cell of the opposite color
-bool connected(Board board, int visited[], int i, int target) {
-    if (visited[i]) {
-        return false;
-
+// Helper function to check if an array contains a specific element
+bool contains(int arr[], int size, int element)
+{
+    for (int i = 0; i < size; ++i)
+    {
+        if (arr[i] == element)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+// Check connectivity of cells using DFS
+bool check_connectivity(Board board, int target)
+{
+    int visited[SIZE * SIZE];
+    for (int i = 0; i < SIZE * SIZE; ++i)
+    {
+        visited[i] = 0;
     }
 
-    visited[i] = 1;
+    int cells[SIZE * SIZE];
+    int num_cells = 0;
 
-    int x = i % SIZE, y = i / SIZE;
-    int index = y * SIZE + x;
-
-    // Check neighboring cells
-    for (int dy = -1; dy <= 1; ++dy) {
-        for (int dx = -1; dx <= 1; ++dx) {
-            if (dx == 0 && dy == 0) {
-                continue;
+    // Collect cell indices
+    for (int y = 0; y < SIZE; ++y)
+    {
+        for (int x = 0; x < SIZE; ++x)
+        {
+            int index = y * SIZE + x;
+            if (target)
+            {
+                if (!(board & (1 << index + 16)) == !target)
+                {
+                    cells[num_cells++] = index;
+                }
             }
-
-            int new_x = x + dx, new_y = y + dy;
-            if (new_x >= 0 && new_x < SIZE && new_y >= 0 && new_y < SIZE) {
-                int neighbor_index = new_y * SIZE + new_x;
-
-                if ((board & (1 << neighbor_index)) != target) {
-                    if (connected(board, visited, neighbor_index, target)) {
-                        return true;
-                    }
+            else
+            {
+                if ((board & (1 << index + 16)) == target)
+                {
+                    cells[num_cells++] = index;
                 }
             }
         }
     }
 
-    return false;
-}
-// Check if board satisfies continuity condition
-bool check_connectivity(Board board) {
-    // Count number of white and black cells
-    int white_cells = 0, black_cells = 0;
-    for (int i = 16; i < 32; ++i) {
-        if ((board & (1 << i)) != 0) {
-            white_cells++;
-        } else {
-            black_cells++;
+    printf("target %d\tnumcell %d\n", target, num_cells);
+
+    if (num_cells > 0)
+    {
+        // Perform DFS
+        int stack[SIZE * SIZE];
+        int top = -1;
+
+        int startCell = cells[0];
+        stack[++top] = startCell;
+
+        while (top >= 0)
+        {
+            int currentCell = stack[top--];
+            visited[currentCell] = 1;
+
+            // Get the indices of neighboring cells
+            int currentX = currentCell % SIZE;
+            int currentY = currentCell / SIZE;
+            int indexUpCell = currentCell - SIZE;
+            int indexDownCell = currentCell + SIZE;
+            int indexLeftCell = currentCell - 1;
+            int indexRightCell = currentCell + 1;
+
+            // Check if any neighboring cell is in the same set of cells
+            if (contains(cells, num_cells, indexUpCell) && !visited[indexUpCell])
+                stack[++top] = indexUpCell;
+            if (contains(cells, num_cells, indexDownCell) && !visited[indexDownCell])
+                stack[++top] = indexDownCell;
+            if (contains(cells, num_cells, indexLeftCell) && !visited[indexLeftCell] && currentCell % SIZE != 0)
+                stack[++top] = indexLeftCell;
+            if (contains(cells, num_cells, indexRightCell) && !visited[indexRightCell] && (currentCell + 1) % SIZE != 0)
+                stack[++top] = indexRightCell;
         }
-    }
 
-    printf("\nw : %d b : %d\n", white_cells, black_cells);
+        for (int i = 0; i < num_cells; ++i)
+        {
+            if (!visited[cells[i]])
+            {
+                return false;
+            }
+        }
 
-    if (white_cells == 1 || black_cells == 1 || white_cells == 0 || black_cells == 0) {
-        // If there are no white or black cells, the condition is satisfied
         return true;
     }
-
-    // Check if white and black cells are separated by at least one empty cell
-    int visited[SIZE * SIZE] = {0};
-    for (int i = 0; i < SIZE * SIZE; ++i) {
-        if ((board & (1 << i)) != 0) {
-            if (connected(board, visited, i, 0)) {
-                return false;
-            }
-        } else {
-            if (connected(board, visited, i, 1)) {
-                return false;
-            }
-        }
+    else
+    {
+        return false; // No cells with the target color, not connected.
     }
-
-    return true;
 }
 
 // Check 2*2 square
@@ -137,12 +169,13 @@ bool check_square(Board board)
 bool is_valid(Board board)
 {
     // Checking the condition that the board is completely full
+    printf("\nnum : %d\n", count_cell(board));
     if (count_cell(board) != 16)
     {
         return false;
     }
     // Check condition 1 & 2
-    if (check_square(board) && check_connectivity(board))
+    if (check_square(board) && check_connectivity(board, 0) && check_connectivity(board, 1))
     {
         return true;
     }
@@ -157,6 +190,15 @@ bool condition_continue(Board board)
 }
 
 // Print board
+void printBinary(int number)
+{
+    // Assuming 32-bit integer for simplicity
+    for (int i = 31; i >= 0; i--)
+    {
+        printf("%d", (number >> i) & 1);
+    }
+    printf("\n");
+}
 void print_board(Board board)
 {
     for (int y = 0; y < SIZE; y++)
@@ -184,7 +226,9 @@ void print_board(Board board)
         }
         printf("\n");
     }
-    printf("------------------------Number of Board: %d-----------------------\n\n\n", ++count);
+
+    printBinary(board);
+    printf("-----------%d-------------Number of Board: %d-----------------------\n\n\n", board, ++count);
 }
 
 // Create empty board
@@ -196,6 +240,7 @@ Board create_board()
 // Set cell (x,y) to be painted white
 void set_white(Board *board, int x, int y)
 {
+
     int index = y * SIZE + x;
     *board |= (1 << index);         // Set paint bit
     *board &= ~(1 << (index + 16)); // Clear black bit
@@ -390,13 +435,13 @@ int main()
     root->children = NULL;
     root->num_children = 0;
 
-    printf("BFS:\n");
-    bfs(root);
-    count = 0;
     printf("DFS:\n");
     dfs(root);
-    
-    
+
+    count = 0;
+
+    printf("BFS:\n");
+    bfs(root);
 
     free_tree(root);
 
